@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>DXO CHAT</title>
+  <style>
+    :root{--bg:#030404;--panel:#05120a;--accent:#12ff2e;--muted:#7a9b78}
+    html,body{height:100%;margin:0;font-family:ui-monospace,Menlo,monospace;background:linear-gradient(180deg,#000 0%,#04110a 60%);color:var(--accent)}
+    .wrap{height:100%;display:flex;align-items:center;justify-content:center;padding:24px}
+    .card{width:980px;max-width:98%;height:720px;background:rgba(0,0,0,0.45);border:1px solid rgba(18,255,46,0.06);box-shadow:0 20px 60px rgba(0,0,0,0.7);border-radius:8px;display:flex;overflow:hidden}
+    .left{width:62%;min-width:420px;padding:18px;background:linear-gradient(0deg,rgba(2,20,8,0.6),transparent),repeating-linear-gradient(45deg,rgba(255,255,255,0.002) 0 2px, transparent 2px 6px);border-right:1px solid rgba(18,255,46,0.03);display:flex;flex-direction:column}
+    .title{font-size:18px;font-weight:700;letter-spacing:1px;display:flex;align-items:center;gap:12px}
+    .glitch{position:relative;display:inline-block}
+    .glitch::before,.glitch::after{content:attr(data-text);position:absolute;left:0;top:0;opacity:0.8}
+    .glitch::before{color:var(--accent);transform:translate(-2px,0);mix-blend-mode:screen;animation:glitch-1 2s infinite}
+    .glitch::after{color:var(--muted);transform:translate(2px,0);mix-blend-mode:screen;animation:glitch-2 3s infinite}
+    @keyframes glitch-1{0%{clip-path:inset(0 0 0 0);}20%{clip-path:inset(40% 0 55% 0);}40%{clip-path:inset(10% 0 70% 0);}60%{clip-path:inset(60% 0 10% 0);}100%{clip-path:inset(0 0 0 0);}}
+    @keyframes glitch-2{0%{clip-path:inset(0 0 0 0);}30%{clip-path:inset(5% 0 65% 0);}55%{clip-path:inset(40% 0 30% 0);}85%{clip-path:inset(10% 0 5% 0);}100%{clip-path:inset(0 0 0 0);}}
+    .screen{background:linear-gradient(180deg,rgba(0,0,0,0.15),transparent);flex:1;margin-top:12px;padding:14px;border-radius:6px;overflow:auto;box-shadow:inset 0 0 40px rgba(0,0,0,0.6)}
+    /* messages */
+    .msg{padding:8px 10px;border-radius:6px;margin:6px 0;max-width:88%;word-break:break-word;background:linear-gradient(90deg, rgba(18,255,46,0.03), rgba(18,255,46,0.01));box-shadow:0 2px 0 rgba(0,0,0,0.6);position:relative}
+    .msg.me{margin-left:auto;border:1px solid rgba(18,255,46,0.06)}
+    .msg .who{font-weight:700;color:var(--accent);font-size:12px}
+    .msg .txt{margin-top:6px;font-size:14px}
+    .del-btn{position:absolute;top:8px;right:8px;color:var(--muted);cursor:pointer;font-weight:700;font-size:14px;opacity:0.45;transition:opacity .15s}
+    .del-btn:hover{opacity:1;color:var(--accent)}
+    .inputbar{display:flex;gap:8px;padding-top:10px}
+    .input{flex:1;background:transparent;border:1px solid rgba(18,255,46,0.06);padding:10px;border-radius:6px;color:var(--accent);outline:none;font-size:14px}
+    .btn{padding:10px 14px;border-radius:6px;background:rgba(18,255,46,0.06);border:1px solid rgba(18,255,46,0.12);cursor:pointer}
+    .right{width:38%;min-width:260px;padding:18px;display:flex;flex-direction:column;gap:12px;background:linear-gradient(0deg,#06110d,#031008)}
+    .profile{display:flex;align-items:center;gap:12px}
+    .avatar{width:56px;height:56px;border-radius:8px;background:linear-gradient(180deg,#05120a,#072210);display:flex;align-items:center;justify-content:center;border:1px solid rgba(18,255,46,0.06);font-weight:800}
+    .small{font-size:13px;color:var(--muted)}
+    .users{flex:1;overflow:auto;padding:10px;border-radius:6px;background:linear-gradient(180deg,rgba(0,0,0,0.12),transparent)}
+    .user{padding:8px;border-radius:6px;margin-bottom:8px;border:1px dashed rgba(18,255,46,0.04)}
+    @media (max-width:760px){.card{flex-direction:column;height:auto}.left{width:100%}.right{width:100%}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card" role="application">
+      <div class="left">
+        <div class="title"><span class="glitch" data-text="SOUL MASSAGE">SOUL MASSAGE</span><span class="small">/ realtime terminal</span></div>
+        <div class="meta">Mode: <strong>Public</strong> · Theme: <strong>Green Terminal</strong></div>
+        <div id="screen" class="screen" aria-live="polite"></div>
+
+        <div class="inputbar">
+          <input id="name" class="input" placeholder="Nama (boleh anonim) — contoh: abiescc" />
+          <input id="txt" class="input" placeholder="Ketik pesan... tekan Enter untuk kirim" />
+          <button id="send" class="btn">Kirim</button>
+        </div>
+      </div>
+
+      <div class="right">
+        <div class="profile">
+          <div class="avatar">XS</div>
+          <div>
+            <div style="font-weight:800">Own : X525vl</div>
+            <div class="small">Pesan tersimpan realtime — dilihat orang lain</div>
+          </div>
+        </div>
+
+        <div class="users" id="users">
+          <div class="small">Pengguna aktif akan muncul di sini.</div>
+        </div>
+
+        <div style="display:flex;gap:8px;align-items:center">
+          <button id="clearLocal" class="btn" title="Hapus history lokal">Clear local</button>
+          <button id="beep" class="btn" title="Toggle sound">Sound: On</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase modular SDK (v11+) -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { getDatabase, ref, push, onChildAdded, remove, query, limitToLast, onValue } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+
+    // you told me to paste these — they're in place now
+    const firebaseConfig = {
+      apiKey: "AIzaSyCEvXzebYtdZX8fwufLKijtisExCBKijtQ",
+      authDomain: "sexproject-7ee4b.firebaseapp.com",
+      databaseURL: "https://sexproject-7ee4b-default-rtdb.firebaseio.com",
+      projectId: "sexproject-7ee4b",
+      storageBucket: "sexproject-7ee4b.firebasestorage.app",
+      messagingSenderId: "364225536809",
+      appId: "1:364225536809:web:98f765bccde630d3b84d38",
+      measurementId: "G-RHJSSQ79KL"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+    const auth = getAuth(app);
+
+    // DOM
+    const screen = document.getElementById('screen');
+    const nameInput = document.getElementById('name');
+    const txt = document.getElementById('txt');
+    const send = document.getElementById('send');
+    const usersBox = document.getElementById('users');
+    const clearLocal = document.getElementById('clearLocal');
+    const beepBtn = document.getElementById('beep');
+
+    let currentUID = null;
+    let soundOn = true;
+    beepBtn.onclick = ()=>{ soundOn = !soundOn; beepBtn.textContent = 'Sound: ' + (soundOn? 'On':'Off'); };
+
+    function tone(freq=880, dur=0.05){
+      if(!soundOn) return;
+      try{
+        const c = new (window.AudioContext || window.webkitAudioContext)();
+        const o = c.createOscillator();
+        const g = c.createGain();
+        o.type = 'sine'; o.frequency.value = freq;
+        o.connect(g); g.connect(c.destination);
+        g.gain.value = 0.02;
+        o.start();
+        g.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + dur);
+        o.stop(c.currentTime + dur + 0.01);
+      }catch(e){}
+    }
+
+    // local storage
+    function saveLocal(message){
+      try{
+        const arr = JSON.parse(localStorage.getItem('warp_chat')||'[]');
+        arr.push(message);
+        localStorage.setItem('warp_chat', JSON.stringify(arr));
+      }catch(e){}
+    }
+    function loadLocal(){
+      try{
+        const arr = JSON.parse(localStorage.getItem('warp_chat')||'[]');
+        arr.forEach(m=>renderMessage('local-'+Math.random(), m, false));
+      }catch(e){}
+    }
+    clearLocal.onclick = ()=>{ localStorage.removeItem('warp_chat'); screen.innerHTML=''; loadLocal(); };
+
+    // Auth
+    signInAnonymously(auth).catch(err=>console.error('Auth error',err));
+    onAuthStateChanged(auth, user => { if(user) currentUID = user.uid; });
+
+    // utility render
+    function renderMessage(key,data,me=false){
+      // ignore malformed
+      if(!data || typeof data.text === 'undefined') return;
+      const wrap = document.createElement('div');
+      wrap.className = 'msg' + (me ? ' me' : '');
+      wrap.dataset.key = key;
+      const who = document.createElement('div'); who.className='who'; who.textContent = data.name || 'anon';
+      const txtN = document.createElement('div'); txtN.className='txt'; txtN.textContent = data.text;
+      const meta = document.createElement('div'); meta.className='small'; meta.style.opacity='0.7'; meta.textContent = data.ts ? new Date(data.ts).toLocaleString('id-ID') : '';
+      wrap.append(who, txtN, meta);
+      if(me){
+        const del = document.createElement('span');
+        del.className = 'del-btn';
+        del.textContent = '[x]';
+        del.onclick = ()=> { remove(ref(db, 'messages/' + key)).catch(console.error); const el = screen.querySelector(`[data-key='${key}']`); if(el) el.remove(); };
+        wrap.appendChild(del);
+      }
+      screen.appendChild(wrap);
+      screen.scrollTop = screen.scrollHeight;
+    }
+
+    // send message
+    function sendMessage(name, text){
+      const p = { name: name || 'anon', text: text || '', ts: Date.now(), uid: currentUID || 'unknown' };
+      push(ref(db, 'messages'), p)
+        .then(r => { saveLocal(p); tone(1200,0.04); })
+        .catch(e => { console.error(e); tone(240,0.06); });
+    }
+
+    // listen for messages (last 100)
+    const q = query(ref(db,'messages'), limitToLast(100));
+    onChildAdded(q, snap => {
+      const data = snap.val();
+      const key = snap.key;
+      // if this message already rendered as local immediately (same text & name at end), avoid dup:
+      const last = screen.lastElementChild;
+      if(last && last.dataset && last.querySelector && last.querySelector('.txt') && last.querySelector('.who')){
+        if(last.querySelector('.txt').textContent === data.text && last.querySelector('.who').textContent === data.name){
+          // if last element is same and no data-key set (local immediate), update its data-key
+          if(!last.dataset.key) last.dataset.key = key;
+          updateActiveUsers();
+          return;
+        }
+      }
+      const me = (currentUID && data.uid === currentUID);
+      renderMessage(key, data, me);
+      tone(me ? 420 : 680, 0.04);
+      updateActiveUsers();
+    });
+
+    // update active users list (distinct names in last 200)
+    function updateActiveUsers(){
+      const q2 = query(ref(db,'messages'), limitToLast(200));
+      onValue(q2, snap => {
+        const obj = snap.val() || {};
+        const names = new Set();
+        Object.values(obj).forEach(m => names.add(m.name||'anon'));
+        usersBox.innerHTML = '<div class="small">Pengguna aktif:</div>' + Array.from(names).map(n=>`<div class="user">${n}</div>`).join('');
+      }, err => console.error(err));
+    }
+
+    // UI bindings
+    send.onclick = ()=>{ const nm = nameInput.value.trim() || 'anon'; const t = txt.value.trim(); if(!t) return; sendMessage(nm,t); txt.value=''; };
+    txt.addEventListener('keydown', e=>{ if(e.key === 'Enter'){ e.preventDefault(); send.click(); } });
+
+    // welcome
+    loadLocal();
+    renderMessage('sys', { name:'system', text:'Selamat datang. Chat ini realtime & pesan dapat dihapus oleh pengirim.' }, false);
+
+  </script>
+</body>
+</html>
