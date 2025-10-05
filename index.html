@@ -1,0 +1,122 @@
+<!-- ===== Anonymous Local Guestbook — Safe Demo ===== -->
+<style>
+  .anon-wrap{margin-top:28px;max-width:980px;padding:18px;border-radius:8px;background:linear-gradient(180deg, rgba(0,0,0,0.6), rgba(0,0,0,0.8));border:1px solid rgba(0,255,0,0.08);color:#0f0;font-family:monospace}
+  .anon-header{display:flex;align-items:center;gap:12px}
+  .anon-title{font-size:18px;font-weight:700}
+  .typing-led{width:10px;height:14px;background:#0f0;border-radius:2px;animation:blink 1s steps(1,end) infinite}
+  @keyframes blink{50%{opacity:0}}
+  textarea.anon-input{width:100%;box-sizing:border-box;padding:10px;background:#000;color:#0f0;border:1px solid rgba(0,255,0,0.12);border-radius:6px;font-family:monospace;margin-top:10px}
+  .anon-controls{display:flex;gap:8px;margin-top:10px;align-items:center}
+  .anon-btn{background:transparent;border:1px solid rgba(0,255,0,0.15);color:#0f0;padding:8px 12px;border-radius:6px;cursor:pointer}
+  .anon-small{font-size:12px;color:rgba(0,255,0,0.6)}
+  .anon-list{margin-top:14px;max-height:260px;overflow:auto;padding-right:8px;border-top:1px dashed rgba(0,255,0,0.04);padding-top:12px}
+  .anon-item{padding:8px;border-bottom:1px dashed rgba(0,255,0,0.03);white-space:pre-wrap;font-size:14px}
+  .meta{font-size:12px;color:rgba(0,255,0,0.5);margin-left:auto}
+  .fake-terminal{background:#000;border:1px solid rgba(255,255,255,0.02);padding:10px;border-radius:6px}
+</style>
+
+<div class="anon-wrap" id="anonWrap" aria-live="polite">
+  <div class="anon-header">
+    <div class="anon-title">Guestbook Anonimus <span class="typing-led" aria-hidden="true"></span></div>
+    <div class="meta">Local only • Aman untuk demo</div>
+  </div>
+
+  <div class="fake-terminal" style="margin-top:10px">
+    <div style="font-size:13px;color:rgba(0,255,0,0.6)">root@board:~$ <span id="terminalLine" style="color:#0f0"></span><span id="terminalCursor" style="display:inline-block;width:8px;height:14px;background:#0f0;margin-left:6px;animation:blink 1s steps(1,end) infinite"></span></div>
+  </div>
+
+  <textarea id="anonText" class="anon-input" rows="4" placeholder="Ketik pesan anonim di sini..."></textarea>
+
+  <div class="anon-controls">
+    <input id="anonName" style="padding:6px 8px;border-radius:6px;background:#000;border:1px solid rgba(0,255,0,0.08);color:#0f0;font-family:monospace" placeholder="Nama (opsional)"/>
+    <button id="anonPost" class="anon-btn">Kirim</button>
+    <button id="anonClear" class="anon-btn">Hapus Lokal</button>
+    <button id="anonExport" class="anon-btn">Ekspor (.txt)</button>
+    <div style="flex:1"></div>
+    <div class="anon-small">Jumlah pesan: <span id="count">0</span></div>
+  </div>
+
+  <div class="anon-list" id="anonList"></div>
+</div>
+
+<script>
+  // --------- Safety: escape to avoid XSS ----------
+  function escapeHtml(s){
+    if (!s) return '';
+    return s.replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  const KEY = 'guestbook_demo_anon_v2';
+  const text = document.getElementById('anonText');
+  const name = document.getElementById('anonName');
+  const list = document.getElementById('anonList');
+  const cnt = document.getElementById('count');
+  const termLine = document.getElementById('terminalLine');
+
+  function load(){ try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch(e){ return []; } }
+  function save(a){ try { localStorage.setItem(KEY, JSON.stringify(a)); } catch(e){} }
+  function render(){
+    const items = load();
+    cnt.textContent = items.length;
+    list.innerHTML = '';
+    if (!items.length){ list.innerHTML = '<div style="opacity:0.6;font-size:13px">Belum ada pesan.</div>'; return; }
+    items.slice().reverse().forEach(it=>{
+      const d = new Date(it.t||0).toLocaleString();
+      const el = document.createElement('div');
+      el.className = 'anon-item';
+      el.innerHTML = '<strong>' + escapeHtml(it.n||'Anonimus') + '</strong> <span style="color:rgba(0,255,0,0.5);font-size:12px">— ' + escapeHtml(d) + '</span><div style="margin-top:6px">' + escapeHtml(it.m) + '</div>';
+      list.appendChild(el);
+    });
+  }
+
+  document.getElementById('anonPost').addEventListener('click', ()=>{
+    const m = text.value.trim();
+    if (!m) return text.focus();
+    const n = name.value.trim() || 'Anonimus';
+    const a = load();
+    a.push({n:n, m:m, t: Date.now()});
+    save(a);
+    text.value = '';
+    render();
+  });
+
+  document.getElementById('anonClear').addEventListener('click', ()=>{
+    if (!confirm('Hapus semua pesan yang tersimpan secara lokal di browser ini?')) return;
+    localStorage.removeItem(KEY);
+    render();
+  });
+
+  document.getElementById('anonExport').addEventListener('click', ()=>{
+    const a = load();
+    if (!a.length){ alert('Tidak ada pesan untuk diekspor.'); return; }
+    const lines = a.map(it => `[${new Date(it.t).toLocaleString()}] ${it.n}: ${it.m}`);
+    const blob = new Blob([lines.join("\\n\\n")], {type:'text/plain'});
+    const url = URL.createObjectURL(blob);
+    const ael = document.createElement('a');
+    ael.href = url; ael.download = 'guestbook_anon.txt'; document.body.appendChild(ael); ael.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); ael.remove(); }, 1200);
+  });
+
+  // Terminal-like fake typing effect for the header line
+  const samples = [
+    'Access log: 0x4f3a... waiting for input',
+    'Listening on 127.0.0.1:1337',
+    'No intrusion detected. Play nice.',
+    'Guestbook ready. Type something rebellious.'
+  ];
+  let si = 0;
+  function typeLine(str, cb){
+    let i=0; termLine.textContent = '';
+    const id = setInterval(()=>{
+      termLine.textContent += str[i++] || '';
+      if (i>str.length){ clearInterval(id); setTimeout(()=>cb && cb(), 900); }
+    }, 40);
+  }
+  function cycle(){ typeLine(samples[si], ()=>{ si = (si+1) % samples.length; setTimeout(cycle, 700); }); }
+  cycle();
+
+  // initialize
+  render();
+</script>
