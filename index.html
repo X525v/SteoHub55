@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Demo Logging IP (Edukasi)</title>
+</head>
+<body>
+  <h1>Demo: Logging IP ke Telegram (Edukasi)</h1>
+  <p>Halaman ini akan memanggil server untuk mencatat kunjungan (IP, UA, timestamp).</p>
+
+  <script>
+    // Panggil endpoint /visit saat halaman dimuat
+    fetch('/visit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ page: window.location.pathname, referrer: document.referrer || null })
+    }).then(()=> {
+      console.log('Visit tercatat (client).');
+    }).catch(err => {
+      console.error('Gagal memanggil /visit', err);
+    });
+  </script>
+</body>
+</html>
